@@ -116,5 +116,3 @@ if __name__ == "__main__":
     newfile, ext = os.path.splitext(args.FILE)
     with open(newfile + "modded" + ext, 'w') as fid:
         json.dump(obj, fid, indent=4)
-
-
