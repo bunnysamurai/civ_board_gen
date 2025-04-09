@@ -16,3 +16,7 @@ Then, run make!
 ```bash
 $ make map
 ```
+
+# example
+
+![random map](example.png)

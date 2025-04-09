@@ -2,7 +2,7 @@
 .PHONY: prep
 
 map: prep
-	cd assets && python ../src/algo.py unique_onlymodded.json 6 5
+	cd assets && python ../src/algo.py unique_onlymodded.json 9 6
 
 prep: assets/unique_onlymodded.json
 
