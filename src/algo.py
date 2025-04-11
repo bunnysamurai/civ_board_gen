@@ -299,7 +299,8 @@ class MapMaker:
     '''
     def _create_map(self):
         # Now the fun begins.  
-        working_map = self._the_real_random_map(self._random_strategy())
+        # working_map = self._the_real_random_map(self._random_strategy())
+        working_map = self._the_real_random_map(self._parceled_strategy())
         return working_map
 
     def _init_map(self):
@@ -310,12 +311,68 @@ class MapMaker:
         return result
 
     def _random_strategy(self):
+        def choose_randomly():
+            return 1 if random.random() > 0.30 else 0
         def capture():
             verts = []
             for row in range(0, self.height+1):
                 for col in range(0, self.width+1):
-                    verts.append(TileVertex(pt=(col,row), edge_id_mask=random.randint(0,1)))
+                    # initialize border verticies with 0 (ocean)
+                    edge_val = 0 if row == 0 or col == 0 or row == self.height or col == self.width else choose_randomly()
+                    verts.append(TileVertex(pt=(col,row), edge_id_mask=edge_val))
             return verts
+        return capture
+
+    def _parceled_strategy(self):
+        def choose_randomly():
+            return 1 if random.random() > 0.30 else 0
+        def create_parcels(width, height):
+            # divide up the possible verticies into 3 groups:
+            #
+            #   +--------------+
+            #   |     |        |
+            #   |-----*        |
+            #   |     |        |
+            #   +--------------+
+            center_point = [width//2, height//2]
+            # add noise
+            center_point[0] += random.randint(-2,3)
+            center_point[1] += random.randint(-2,3)
+            # we can now define 3 rectangles
+            rect1 = [0, 0, *center_point]
+            rect2 = [0, center_point[1], center_point[0], height - center_point[1]]
+            rect3 = [center_point[0], 0, width - center_point[0], height]
+
+            result = []
+            for r in (rect1, rect2, rect3):
+                x, y, w, h = r
+                points = []
+                for yy in range(y, y+h):
+                    for xx in range(x, x+w):
+                        points.append([xx,yy])
+                result.append(np.asarray(points))
+            return result
+
+        parcels = create_parcels(self.width+1, self.height+1)
+
+        def capture():
+            def generate(parsec):
+                verts = []
+                minC, minR = np.min(parsec,0)
+                maxC, maxR = np.max(parsec,0)
+                for col, row in parsec:
+                    # initialize border verticies with 0 (ocean)
+                    if row == minR or col == minC or row == maxR or col == maxC:
+                        verts.append(TileVertex(pt=(col,row), edge_id_mask=0))
+                    else:
+                        verts.append(TileVertex(pt=(col,row), edge_id_mask=choose_randomly()))
+                return verts
+            verticies = []
+            for p in parcels:
+                for tmp in generate(p):
+                    verticies.append(tmp)
+            return verticies
+
         return capture
 
     def _the_real_random_map(self, vertex_assignment_strategy):
@@ -330,19 +387,22 @@ class MapMaker:
         # IMPORTANT this is then entry point for continent creation algorithms
         verts = vertex_assignment_strategy()
 
-
         # iterate through each vertex, defining each edge ahead of it, with boundary clamping
+        def find_vert(vert_list, x, y):
+            result = [idx for idx, v in enumerate(vert_list) if v.pt == (x,y)]
+            assert(len(result) == 1)
+            return result[0]
         edges = []
         for row in range(0, self.height+1):
             for col in range(0,self.width+1):
-                cur_idx = row * ( self.width+1 ) + col
+                cur_idx = find_vert(verts, col, row)
                 # at this vertex, there is one extending to the right (maybe) 
                 # and one extending below (maybe)
                 if col+1 < self.width+1:
-                    cad_idx = cur_idx + 1
+                    cad_idx = find_vert(verts, col+1, row)
                     edges.append(TileEdge(vert1=verts[cur_idx], vert2=verts[cad_idx]))
                 if row+1 < self.height+1:
-                    rad_idx = cur_idx + self.width + 1
+                    rad_idx = find_vert(verts, col, row+1)
                     edges.append(TileEdge(vert1=verts[cur_idx], vert2=verts[rad_idx]))
         
         # now that we have the edges defined, let's start making matches
@@ -439,7 +499,7 @@ if __name__ == "__main__":
     if DEBUG_RUN_TESTS:
         run_tests()
     else:
-        MAXTRIES = 10000
+        MAXTRIES = 1
         parser = argparse.ArgumentParser(description="Make a map for Civ III, the Boardgame!")
         parser.add_argument("TILESET", type=str, help=".json of the tile set to use")
         parser.add_argument("WIDTH", type=int, help="Map width, in tiles")
@@ -450,23 +510,9 @@ if __name__ == "__main__":
         MAPW = args.WIDTH
         MAPH = args.HEIGHT
         tileset = TileSet(my_json_file=args.TILESET)
-        tries = 0
-        while(True):
-            try:
-                tries = tries + 1
-                if tries > MAXTRIES:
-                    break
-                maker = MapMaker(tileset, map_wh=(MAPW, MAPH))
-                break
-            except Exception as e:
-                print(f"caught {e}")
-                continue
-        if tries > MAXTRIES:
-            print(f"Try limit reached: {tries}")
-            sys.exit(0)
+        maker = MapMaker(tileset, map_wh=(MAPW, MAPH))
         plt.figure(24511)
         plt.imshow(maker.render())
-        plt.title(f"Tried {tries} times")
         plt.show()
 else:
     pass # explicitly
