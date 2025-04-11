@@ -327,7 +327,7 @@ class MapMaker:
         def choose_randomly():
             return 1 if random.random() > 0.30 else 0
         def create_parcels(width, height):
-            # divide up the possible verticies into 3 groups:
+            # divide up the possible verticies into 3(or 2) groups:
             #
             #   +--------------+
             #   |     |        |
@@ -338,13 +338,13 @@ class MapMaker:
             # add noise
             center_point[0] += random.randint(-2,3)
             center_point[1] += random.randint(-2,3)
-            # we can now define 3 rectangles
-            rect1 = [0, 0, *center_point]
-            rect2 = [0, center_point[1], center_point[0], height - center_point[1]]
-            rect3 = [center_point[0], 0, width - center_point[0], height]
+            # we can now define 2 rectangles
+            rect1 = [0, 0, center_point[0], height]
+            rect2 = [center_point[0], 0, width - center_point[0], height]
+            rectlist = (rect1, rect2)
 
             result = []
-            for r in (rect1, rect2, rect3):
+            for r in rectlist:
                 x, y, w, h = r
                 points = []
                 for yy in range(y, y+h):
