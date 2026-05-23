@@ -300,8 +300,8 @@ class MapMaker:
     def _create_map(self):
         # Now the fun begins.  
         # working_map = self._the_real_random_map(self._random_strategy())
-        # working_map = self._the_real_random_map(self._parceled_strategy())
-        working_map = self._the_real_random_map(self._single_continent_strategy())
+        working_map = self._the_real_random_map(self._parceled_strategy())
+        # working_map = self._the_real_random_map(self._single_continent_strategy())
         return working_map
 
     def _init_map(self):
@@ -330,7 +330,7 @@ class MapMaker:
         centers = [(self.height+1)//2, ( self.width+1 )//2]
         off = [( self.height+1 )//4, ( self.width+1 )//4]
         grid[off[0]:centers[0], off[1]:centers[1]] = 1
-        grid = add_noise(grid)
+        #grid = add_noise(grid)
         def capture():
             verts = []
             for row in range(0, grid.shape[0]):
